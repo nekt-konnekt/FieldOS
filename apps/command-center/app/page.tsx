@@ -28,7 +28,7 @@ export default function CommandCenter(){
  useEffect(()=>{if(!session.isPending&&!session.data)router.replace("/auth/sign-in")},[session.isPending,session.data,router]);
 
  const apiFetch=async(path:string,init:RequestInit={})=>{
-  const token=await authClient.getJWTToken();
+  const tokenResponse=await fetch("/api/auth/token",{cache:"no-store"});\n  if(!tokenResponse.ok)throw new Error("Authentication required");\n  const {token}=await tokenResponse.json();
   if(!token)throw new Error("Authentication required");
   const headers=new Headers(init.headers);
   headers.set("authorization","Bearer "+token);
