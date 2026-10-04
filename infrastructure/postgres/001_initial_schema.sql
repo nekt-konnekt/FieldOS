@@ -1,0 +1,16 @@
+create extension if not exists pgcrypto;
+create type task_status as enum ('assigned','in_progress','completed','cancelled');
+create type role_key as enum ('national_admin','state_coordinator','lga_coordinator','ward_coordinator','field_operative');
+create type scope_type as enum ('state','lga','ward','polling_unit');
+create table organizations(id uuid primary key default gen_random_uuid(),name text not null,created_at timestamptz not null default now());
+create table users(id uuid primary key default gen_random_uuid(),organization_id uuid not null references organizations(id) on delete cascade,full_name text not null,phone text,role role_key not null,active boolean not null default true,created_at timestamptz not null default now());
+create table states(id uuid primary key default gen_random_uuid(),name text not null unique);
+create table lgas(id uuid primary key default gen_random_uuid(),state_id uuid not null references states(id) on delete cascade,name text not null,unique(state_id,name));
+create table wards(id uuid primary key default gen_random_uuid(),lga_id uuid not null references lgas(id) on delete cascade,name text not null,unique(lga_id,name));
+create table polling_units(id uuid primary key default gen_random_uuid(),ward_id uuid not null references wards(id) on delete cascade,code text,name text not null,latitude double precision,longitude double precision,unique(ward_id,name));
+create table tasks(id uuid primary key default gen_random_uuid(),organization_id uuid not null references organizations(id) on delete cascade,title text not null,description text,status task_status not null default 'assigned',assignee_id uuid references users(id) on delete set null,scope_type scope_type,scope_id uuid,due_at timestamptz,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table task_events(id uuid primary key default gen_random_uuid(),task_id uuid not null references tasks(id) on delete cascade,actor_id uuid references users(id) on delete set null,event_type text not null,payload jsonb not null default '{}'::jsonb,client_operation_id text,created_at timestamptz not null default now());
+create unique index task_events_client_operation_uidx on task_events(client_operation_id) where client_operation_id is not null;
+create index tasks_org_status_idx on tasks(organization_id,status);
+create index tasks_assignee_idx on tasks(assignee_id);
+create index task_events_task_idx on task_events(task_id,created_at);
