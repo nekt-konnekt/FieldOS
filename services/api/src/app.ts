@@ -10,6 +10,7 @@ import {getContext} from "./request-context.js";
 import type {IncidentSeverity,IncidentStatus} from "@fieldos/types";
 
 export const app=Fastify({logger:true});
+// Production CORS origins are configured through CORS_ORIGINS; redeploy when the allowlist changes.
 const allowedOrigins=process.env.CORS_ORIGINS?.split(",").map(v=>v.trim()).filter(Boolean);
 await app.register(cors,{origin:process.env.NODE_ENV==="production"?(allowedOrigins??[]):true});
 await registerAuth(app);
