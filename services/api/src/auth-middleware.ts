@@ -1,6 +1,7 @@
 import {createRemoteJWKSet,jwtVerify} from "jose";
 import type {FastifyInstance,FastifyReply,FastifyRequest} from "fastify";
 import {findFieldUser} from "./db.js";
+import type {Role} from "@fieldos/types";
 
 const PUBLIC=["/health"];
 const roles=new Set(["national_admin","state_coordinator","lga_coordinator","ward_coordinator","field_operative"]);
@@ -28,7 +29,7 @@ export async function registerAuth(app:FastifyInstance){
    if(typeof payload.sub!=="string")throw new Error("Token subject missing");
    const user=await findFieldUser(payload.sub);
    if(!user||!user.active||!roles.has(user.role))throw new Error("User is not provisioned");
-   request.context={userId:user.id,organizationId:user.organizationId,role:user.role};
+   request.context={userId:user.id,organizationId:user.organizationId,role:user.role as Role};
   }catch(error){
    request.log.warn({error},"authentication failed");
    return reply.code(401).send({error:"Authentication required"});
