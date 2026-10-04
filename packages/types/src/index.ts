@@ -4,3 +4,5 @@ export interface Task{id:string;title:string;description?:string;status:TaskStat
 export interface ApiHealth{ok:boolean;service:"fieldos-api";version:string}
 
 export * from "./communication.js";
+
+export * from "./incident.js";
