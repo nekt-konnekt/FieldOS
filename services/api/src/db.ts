@@ -2,7 +2,7 @@ import {Pool,type PoolClient} from "pg";
 import type {Task,TaskStatus} from "@fieldos/types";
 
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_SSL==="true"?{rejectUnauthorized:false}:undefined}):null;
-const memory:Task[]=[];
+const memory:Task[]=[];\nconst appliedOperations=new Set<string>();
 const selectTask=`select id,title,description,status,assignee_id as "assigneeId",scope_type as "scopeType",scope_id as "scopeId",due_at as "dueAt",created_at as "createdAt",updated_at as "updatedAt" from tasks`;
 
 export async function listTasks(){if(!pool)return memory;const {rows}=await pool.query<Task>(selectTask+" order by created_at desc");return rows;}
@@ -15,7 +15,7 @@ export async function createTask(input:Pick<Task,"title"|"description"|"assignee
 }
 
 export async function updateTaskStatus(id:string,status:TaskStatus,clientOperationId?:string){
- if(!pool){const task=memory.find(t=>t.id===id);if(!task)return null;task.status=status;task.updatedAt=new Date().toISOString();return task;}
+ if(!pool){if(clientOperationId&&appliedOperations.has(clientOperationId))return memory.find(t=>t.id===id)??null;const task=memory.find(t=>t.id===id);if(!task)return null;task.status=status;task.updatedAt=new Date().toISOString();if(clientOperationId)appliedOperations.add(clientOperationId);return task;}
  const client:PoolClient=await pool.connect();
  try{
   await client.query("begin");
