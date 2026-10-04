@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import type {ApiHealth,Task,Role} from "@fieldos/types";
-import {closeDb,createTask,listTasks,updateTaskStatus,checkDatabase} from "./db.js";
+import {bootstrapFieldUser,closeDb,createTask,listTasks,updateTaskStatus,checkDatabase} from "./db.js";
 import {requiredText,validStatus} from "./validation.js";
 import {acknowledgeDelivery,createBroadcast,listBroadcasts,listMyDeliveries,publishBroadcast} from "./communications.js";
 import {createIncident,listIncidents,updateIncident} from "./incidents.js";
@@ -19,6 +19,7 @@ app.get("/health",async():Promise<ApiHealth & {databaseConfigured:boolean;databa
  const healthy=configured?await checkDatabase():false;
  return {ok:healthy,service:"fieldos-api",version:"0.3.0",databaseConfigured:configured,databaseHealthy:healthy};
 });
+app.post("/api/v1/bootstrap",async(request,reply)=>{if(!request.authUserId)return reply.code(401).send({error:"Authentication required"});const user=await bootstrapFieldUser(request.authUserId);return user?reply.send(user):reply.code(409).send({error:"FieldOS has already been bootstrapped"});});
 app.get("/api/v1/tasks",async(request)=>listTasks(getContext(request).organizationId));
 app.get("/api/v1/incidents",async(request)=>listIncidents(getContext(request).organizationId));
 app.post<{Body:{title:string;description:string;severity:IncidentSeverity}}>("/api/v1/incidents",async(req,reply)=>{if(!requiredText(req.body.title,160)||!requiredText(req.body.description,4000)||!["low","medium","high","critical"].includes(req.body.severity))return reply.code(400).send({error:"invalid incident"});const ctx=getContext(req);return reply.code(201).send(await createIncident(ctx.organizationId,ctx.userId,req.body.title,req.body.description,req.body.severity));});
