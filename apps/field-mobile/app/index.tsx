@@ -1,0 +1,2 @@
+import {SafeAreaView,Text,View} from "react-native";
+export default function Home(){return <SafeAreaView style={{flex:1}}><View style={{flex:1,padding:24,justifyContent:"center"}}><Text style={{fontSize:28,fontWeight:"700"}}>FieldOS</Text><Text style={{marginTop:8,color:"#667085"}}>Your assigned field work will appear here.</Text></View></SafeAreaView>}
