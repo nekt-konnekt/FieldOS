@@ -34,7 +34,7 @@ export default function CommandCenter(){
   headers.set("authorization","Bearer "+token);
   return fetch(API+path,{...init,headers,cache:"no-store"});
  };
- const load=async()=>{setLoading(true);setError("");try{const [tr,br,ir]=await Promise.all([apiFetch("/api/v1/tasks"),apiFetch("/api/v1/broadcasts"),apiFetch("/api/v1/incidents")]);if([tr,br,ir].some(r=>r.status===401)){router.replace("/auth/sign-in");return}if(!tr.ok||!br.ok||!ir.ok)throw new Error("Unable to load command center data");setTasks(await tr.json());setBroadcasts(await br.json());setIncidents(await ir.json())}catch(e){setError(e instanceof Error?e.message:"Unable to load data")}finally{setLoading(false)}};
+ const load=async()=>{setLoading(true);setError("");try{let tr=await apiFetch("/api/v1/tasks");if(tr.status===401){const boot=await apiFetch("/api/v1/bootstrap",{method:"POST"});if(boot.ok){tr=await apiFetch("/api/v1/tasks")}else if(boot.status===401){router.replace("/auth/sign-in");return}else if(boot.status===409){throw new Error("Your account is authenticated but is not provisioned in FieldOS.")}else{throw new Error("Unable to provision FieldOS access")}}const [br,ir]=await Promise.all([apiFetch("/api/v1/broadcasts"),apiFetch("/api/v1/incidents")]);if(!tr.ok||!br.ok||!ir.ok)throw new Error("Unable to load command center data");setTasks(await tr.json());setBroadcasts(await br.json());setIncidents(await ir.json())}catch(e){setError(e instanceof Error?e.message:"Unable to load data")}finally{setLoading(false)}};
 
  useEffect(()=>{if(session.data)void load()},[session.data]);
 
