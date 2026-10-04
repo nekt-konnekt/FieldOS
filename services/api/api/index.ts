@@ -7,3 +7,5 @@ export default async function handler(req:any,res:any){
   await ready;
   app.server.emit("request",req,res);
 }
+
+// Vercel Fastify entrypoint.
