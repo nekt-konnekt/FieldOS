@@ -6,13 +6,14 @@ import {requiredText,validStatus} from "./validation.js";
 import {acknowledgeDelivery,createBroadcast,listBroadcasts,listMyDeliveries,publishBroadcast} from "./communications.js";
 import {createIncident,listIncidents,updateIncident} from "./incidents.js";
 import {registerAuth} from "./auth-middleware.js";
+import {getContext} from "./request-context.js";
 import type {IncidentSeverity,IncidentStatus} from "@fieldos/types";
 
 const app=Fastify({logger:true});
 await app.register(cors,{origin:true});
 await registerAuth(app);
 app.get("/health",async():Promise<ApiHealth & {databaseConfigured:boolean}>=>({ok:true,service:"fieldos-api",version:"0.2.0",databaseConfigured:Boolean(process.env.DATABASE_URL)}));
-app.get("/api/v1/tasks",async()=>listTasks());
+app.get("/api/v1/tasks",async(request)=>listTasks(getContext(request).organizationId));
 app.get("/api/v1/incidents",async()=>listIncidents());
 app.post<{Body:{title:string;description:string;severity:IncidentSeverity}}>("/api/v1/incidents",async(req,reply)=>{if(!requiredText(req.body.title,160)||!requiredText(req.body.description,4000)||!["low","medium","high","critical"].includes(req.body.severity))return reply.code(400).send({error:"invalid incident"});return reply.code(201).send(await createIncident(req.body.title,req.body.description,req.body.severity));});
 app.patch<{Params:{id:string};Body:{status:IncidentStatus;assignedTo?:string;clientOperationId?:string}}>("/api/v1/incidents/:id",async(req,reply)=>{if(!["open","acknowledged","investigating","resolved","dismissed"].includes(req.body.status))return reply.code(400).send({error:"invalid incident status"});const incident=await updateIncident(req.params.id,req.body.status,req.body.assignedTo,req.body.clientOperationId);return incident?reply.send(incident):reply.code(404).send({error:"Incident not found"});});
