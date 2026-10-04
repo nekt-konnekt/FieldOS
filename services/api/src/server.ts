@@ -5,10 +5,12 @@ import {closeDb,createTask,listTasks,updateTaskStatus} from "./db.js";
 import {requiredText,validStatus} from "./validation.js";
 import {acknowledgeDelivery,createBroadcast,listBroadcasts,listMyDeliveries,publishBroadcast} from "./communications.js";
 import {createIncident,listIncidents,updateIncident} from "./incidents.js";
+import {registerAuth} from "./auth-middleware.js";
 import type {IncidentSeverity,IncidentStatus} from "@fieldos/types";
 
 const app=Fastify({logger:true});
 await app.register(cors,{origin:true});
+await registerAuth(app);
 app.get("/health",async():Promise<ApiHealth & {databaseConfigured:boolean}>=>({ok:true,service:"fieldos-api",version:"0.2.0",databaseConfigured:Boolean(process.env.DATABASE_URL)}));
 app.get("/api/v1/tasks",async()=>listTasks());
 app.get("/api/v1/incidents",async()=>listIncidents());
