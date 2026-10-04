@@ -1,0 +1,1 @@
+{"name":"fieldos","private":true,"version":"0.1.0","workspaces":["apps/*","services/*","packages/*"],"scripts":{"dev:command-center":"npm --workspace @fieldos/command-center run dev","dev:api":"npm --workspace @fieldos/api run dev","dev:mobile":"npm --workspace @fieldos/field-mobile run start","typecheck":"npm run typecheck --workspaces"},"engines":{"node":">=20"}}
