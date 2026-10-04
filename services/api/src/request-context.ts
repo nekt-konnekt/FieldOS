@@ -1,9 +1,9 @@
 import type {Role} from "@fieldos/types";
 import type {FastifyRequest} from "fastify";
 
-export interface RequestContext{organizationId:string;userId:string;role:Role}
+export interface RequestContext{organizationId:string;userId:string;role:Role;authUserId?:string}
 
-declare module "fastify"{interface FastifyRequest{context?:RequestContext}}
+declare module "fastify"{interface FastifyRequest{context?:RequestContext;authUserId?:string}}
 
 export function getContext(request:FastifyRequest):RequestContext{
  if(!request.context)throw new Error("Unauthenticated request");
