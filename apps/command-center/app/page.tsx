@@ -2,17 +2,24 @@
 import {useEffect,useState} from "react";
 type Task={id:string;title:string;description?:string;status:"assigned"|"in_progress"|"completed"|"cancelled";assigneeId?:string;createdAt:string};
 type Broadcast={id:string;title:string;body:string;audienceRole?:string;status:"draft"|"published"|"cancelled";createdAt:string;publishedAt?:string};
+type Incident={id:string;title:string;description:string;severity:"low"|"medium"|"high"|"critical";status:"open"|"acknowledged"|"investigating"|"resolved"|"dismissed";createdAt:string};
 const API=process.env.NEXT_PUBLIC_API_URL??"http://localhost:4000";
 
 export default function CommandCenter(){
  const [tasks,setTasks]=useState<Task[]>([]);
  const [broadcasts,setBroadcasts]=useState<Broadcast[]>([]);
+ const [incidents,setIncidents]=useState<Incident[]>([]);
  const [messageTitle,setMessageTitle]=useState("");
  const [messageBody,setMessageBody]=useState("");
+ const [incidentTitle,setIncidentTitle]=useState("");
+ const [incidentDescription,setIncidentDescription]=useState("");
+ const [incidentSeverity,setIncidentSeverity]=useState("medium");
  const [audienceRole,setAudienceRole]=useState("");
  const [title,setTitle]=useState("");
  const [loading,setLoading]=useState(true);
- const load=async()=>{setLoading(true);try{const [tr,br]=await Promise.all([fetch(API+"/api/v1/tasks",{cache:"no-store"}),fetch(API+"/api/v1/broadcasts",{cache:"no-store"})]);setTasks(await tr.json());setBroadcasts(await br.json())}finally{setLoading(false)}};
+ const load=async()=>{setLoading(true);try{const [tr,br]=await Promise.all([fetch(API+"/api/v1/tasks",{cache:"no-store"}),fetch(API+"/api/v1/broadcasts",{cache:"no-store"}),fetch(API+"/api/v1/incidents",{cache:"no-store"})]);setTasks(await tr.json());setBroadcasts(await br.json());setIncidents(await ir.json())}finally{setLoading(false)}};
+ const createIncident=async()=>{if(!incidentTitle.trim()||!incidentDescription.trim())return;await fetch(API+"/api/v1/incidents",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:incidentTitle.trim(),description:incidentDescription.trim(),severity:incidentSeverity})});setIncidentTitle("");setIncidentDescription("");await load()};
+ const updateIncident=async(id:string,status:Incident["status"])=>{await fetch(API+"/api/v1/incidents/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status,clientOperationId:crypto.randomUUID()})});await load()};
  const createBroadcast=async()=>{if(!messageTitle.trim()||!messageBody.trim())return;await fetch(API+"/api/v1/broadcasts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:messageTitle.trim(),body:messageBody.trim(),audienceRole:audienceRole||undefined})});setMessageTitle("");setMessageBody("");setAudienceRole("");await load()};
  const publish=async(id:string)=>{await fetch(API+"/api/v1/broadcasts/"+id+"/publish",{method:"POST"});await load()};
  useEffect(()=>{void load()},[]);
