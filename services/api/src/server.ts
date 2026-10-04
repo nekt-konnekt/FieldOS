@@ -2,12 +2,18 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import type {ApiHealth,Task} from "@fieldos/types";
 import {closeDb,createTask,listTasks,updateTaskStatus} from "./db.js";\nimport {requiredText,validStatus} from "./validation.js";
+import {acknowledgeDelivery,createBroadcast,listBroadcasts,listMyDeliveries,publishBroadcast} from "./communications.js";
 
 const app=Fastify({logger:true});
 await app.register(cors,{origin:true});
 app.get("/health",async():Promise<ApiHealth & {databaseConfigured:boolean}>=>({ok:true,service:"fieldos-api",version:"0.2.0",databaseConfigured:Boolean(process.env.DATABASE_URL)}));
 app.get("/api/v1/tasks",async()=>listTasks());
 app.post<{Body:Pick<Task,"title"|"description"|"assigneeId"|"scopeType"|"scopeId"|"dueAt">}>("/api/v1/tasks",async(req,reply)=>{if(!requiredText(req.body.title))return reply.code(400).send({error:"title is required"});if(req.body.description&&!requiredText(req.body.description,2000))return reply.code(400).send({error:"description is invalid"});return reply.code(201).send(await createTask(req.body));});
+app.get("/api/v1/broadcasts",async()=>listBroadcasts());
+app.post<{Body:{title:string;body:string;audienceRole?:Task["status"] extends never?never:import("@fieldos/types").Role}}>("/api/v1/broadcasts",async(req,reply)=>{if(!requiredText(req.body.title,160)||!requiredText(req.body.body,4000))return reply.code(400).send({error:"title and body are required"});return reply.code(201).send(await createBroadcast(req.body.title,req.body.body,req.body.audienceRole));});
+app.post<{Params:{id:string}}>("/api/v1/broadcasts/:id/publish",async(req,reply)=>{const b=await publishBroadcast(req.params.id);return b?reply.send(b):reply.code(404).send({error:"Broadcast not found"});});
+app.get("/api/v1/me/deliveries",async()=>listMyDeliveries(process.env.DEV_USER_ID??"00000000-0000-0000-0000-000000000101"));
+app.post<{Params:{id:string}}>("/api/v1/deliveries/:id/acknowledge",async(req,reply)=>{const d=await acknowledgeDelivery(req.params.id,process.env.DEV_USER_ID??"00000000-0000-0000-0000-000000000101");return d?reply.send(d):reply.code(404).send({error:"Delivery not found"});});
 app.patch<{Params:{id:string};Body:{status:Task["status"];clientOperationId?:string}}>("/api/v1/tasks/:id",async(req,reply)=>{if(!validStatus(req.body.status))return reply.code(400).send({error:"invalid status"});const task=await updateTaskStatus(req.params.id,req.body.status,req.body.clientOperationId);return task?reply.send(task):reply.code(404).send({error:"Task not found"});});
 const shutdown=async()=>{await app.close();await closeDb();process.exit(0)};
 process.on("SIGINT",shutdown);process.on("SIGTERM",shutdown);
