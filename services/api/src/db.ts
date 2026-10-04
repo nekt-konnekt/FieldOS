@@ -9,6 +9,23 @@ const selectTask=`select id,title,description,status,assignee_id as "assigneeId"
 function ensureDb(){if(!pool && process.env.NODE_ENV==="production")throw new Error("Database is not configured");return pool;}
 export async function checkDatabase(){if(!pool)return false;try{await pool.query("select 1");return true}catch{return false}}
 export async function findFieldUser(authUserId:string){const db=ensureDb();if(!db)return null;const {rows}=await db.query(`select id,organization_id as "organizationId",role,active from users where auth_user_id=$1 limit 1`,[authUserId]);return rows[0]??null;}
+export async function bootstrapFieldUser(authUserId:string){
+ const db=ensureDb(); if(!db)throw new Error("Database is not configured");
+ const client=await db.connect();
+ try{
+  await client.query("begin");
+  await client.query("select pg_advisory_xact_lock(hashtext('fieldos-first-admin'))");
+  const existing=await client.query("select id,organization_id as \"organizationId\",role,active from users where auth_user_id=$1",[authUserId]);
+  if(existing.rowCount){await client.query("commit");return existing.rows[0]}
+  const count=await client.query("select count(*)::int as count from users");
+  if(count.rows[0].count>0){await client.query("rollback");return null}
+  const authUser=await client.query("select name from neon_auth.user where id=$1 and coalesce(banned,false)=false",[authUserId]);
+  if(!authUser.rowCount){await client.query("rollback");return null}
+  const org=await client.query("insert into organizations(name) values('FieldOS') returning id");
+  const user=await client.query(`insert into users(auth_user_id,organization_id,full_name,role) values($1,$2,$3,'national_admin') returning id,organization_id as "organizationId",role,active`,[authUserId,org.rows[0].id,authUser.rows[0].name||"FieldOS Administrator"]);
+  await client.query("commit"); return user.rows[0];
+ }catch(error){await client.query("rollback");throw error}finally{client.release()}
+}
 export async function listTasks(organizationId:string){const db=ensureDb();if(!db)return memory;const {rows}=await db.query<Task>(selectTask+" where organization_id=$1 order by created_at desc",[organizationId]);return rows;}
 export async function createTask(organizationId:string,input:Pick<Task,"title"|"description"|"assigneeId"|"scopeType"|"scopeId"|"dueAt">){
  const db=ensureDb();
