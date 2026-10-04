@@ -21,7 +21,7 @@ export async function updateTaskStatus(organizationId:string,id:string,status:Ta
  try{
   await client.query("begin");
   if(clientOperationId){const existing=await client.query("select id from task_events where client_operation_id=$1",[clientOperationId]);if(existing.rowCount){const {rows}=await client.query<Task>(selectTask+" where id=$1",[id]);await client.query("commit");return rows[0]??null;}}
-  const {rows}=await client.query<Task>(selectTask+" where id=$1 and organization_id=$2 for update",[id]);if(!rows[0]){await client.query("rollback");return null;}
+  const {rows}=await client.query<Task>(selectTask+" where id=$1 and organization_id=$2 for update",[id,organizationId]);if(!rows[0]){await client.query("rollback");return null;}
   await client.query("update tasks set status=$2,updated_at=now() where id=$1",[id,organizationId,status]);
   await client.query("insert into task_events(task_id,event_type,payload,client_operation_id) values($1,'status_changed',$2,$3)",[id,JSON.stringify({status}),clientOperationId??null]);
   const result=await client.query<Task>(selectTask+" where id=$1 and organization_id=$2",[id,organizationId]);await client.query("commit");return result.rows[0]??null;
