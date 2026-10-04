@@ -5,7 +5,7 @@ const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATAB
 const memory:Task[]=[];\nconst appliedOperations=new Set<string>();
 const selectTask=`select id,title,description,status,assignee_id as "assigneeId",scope_type as "scopeType",scope_id as "scopeId",due_at as "dueAt",created_at as "createdAt",updated_at as "updatedAt" from tasks`;
 
-export async function listTasks(){if(!pool)return memory;const {rows}=await pool.query<Task>(selectTask+" order by created_at desc");return rows;}
+export async function listTasks(organizationId=process.env.DEV_ORGANIZATION_ID??"00000000-0000-0000-0000-000000000001"){if(!pool)return memory;const {rows}=await pool.query<Task>(selectTask+" where organization_id=$1 order by created_at desc",[organizationId]);return rows;}
 
 export async function createTask(input:Pick<Task,"title"|"description"|"assigneeId"|"scopeType"|"scopeId"|"dueAt">){
  if(!pool){const now=new Date().toISOString();const task:Task={id:crypto.randomUUID(),title:input.title,description:input.description,status:"assigned",assigneeId:input.assigneeId,scopeType:input.scopeType,scopeId:input.scopeId,dueAt:input.dueAt,createdAt:now,updatedAt:now};memory.unshift(task);return task;}
