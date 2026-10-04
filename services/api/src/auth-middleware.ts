@@ -28,7 +28,7 @@ export async function registerAuth(app:FastifyInstance){
    const {payload}=await jwtVerify(authorization.slice(7),getJwks(),issuer?{issuer}:{});
    if(typeof payload.sub!=="string")throw new Error("Token subject missing");
    const user=await findFieldUser(payload.sub);
-   if(!user||!user.active||!roles.has(user.role))throw new Error("User is not provisioned");
+   if(!user||!user.active||!roles.has(user.role)){if(request.url.split("?")[0]==="/api/v1/bootstrap"){request.authUserId=payload.sub;return}throw new Error("User is not provisioned");}
    request.context={userId:user.id,organizationId:user.organizationId,role:user.role as Role};
   }catch(error){
    request.log.warn({error},"authentication failed");
